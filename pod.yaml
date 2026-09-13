@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: homework-pod
+  namespace: homework
+spec:
+  # Описание общего тома для контейнеров
+  volumes:
+  - name: shared-data
+    emptyDir: {}
+
+  # Init-контейнер для подготовки файла index.html
+  initContainers:
+  - name: init-container
+    image: busybox:1.36
+    command: ['sh', '-c', 'echo "Hello from Homework!" > /init/index.html']
+    volumeMounts:
+    - name: shared-data
+      mountPath: /init
+
+  # Основной контейнер с веб-сервером
+  containers:
+  - name: web-container
+    image: python:3.11-slim
+    # Запускаем встроенный веб-сервер Python на порту 8000 внутри папки /homework
+    command: ['sh', '-c', 'cd /homework && python3 -m http.server 8000']
+    ports:
+    - containerPort: 8000
+    volumeMounts:
+    - name: shared-data
+      mountPath: /homework
+    
+    # Хук для удаления файла перед завершением работы пода
+    lifecycle:
+      preStop:
+        exec:
+          command: ['rm', '-f', '/homework/index.html']
